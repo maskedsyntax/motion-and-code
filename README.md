@@ -11,6 +11,7 @@ Each folder contains a small, self-contained Flutter or SwiftUI animation built 
 - [Wallet Card Stack](flutter/wallet_card_stack) - An Apple Wallet-style card stack with expansion and focused card details.
 - [Theme Switcher](flutter/theme_switcher) - A dramatic day/night toggle with sun, moon, stars, clouds, and reactive UI.
 - [Infinite Carousel](flutter/infinite_carousel) - A looping, center-focused carousel with fluid depth motion and original illustrated cards.
+- [Folder Explosion](flutter/folder_explosion) - A folder icon that bursts into scattered file cards and collapses back on tap.
 
 ## SwiftUI
 
