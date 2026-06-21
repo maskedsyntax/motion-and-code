@@ -1,7 +1,11 @@
+import 'dart:async';
 import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+
+const Cubic _easeOpen = Cubic(0.33, 0.0, 0.18, 1.0);
+const Cubic _easeClose = Cubic(0.42, 0.0, 0.58, 1.0);
 
 void main() {
   runApp(const FolderExplosionApp());
@@ -17,23 +21,10 @@ class FolderExplosionApp extends StatelessWidget {
       title: 'Folder Explosion',
       theme: ThemeData(
         useMaterial3: true,
+        fontFamily: '.AppleSystemUIFont',
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFDE8B3A),
+          seedColor: const Color(0xFFE8A84A),
           brightness: Brightness.light,
-        ),
-        textTheme: const TextTheme(
-          headlineMedium: TextStyle(
-            fontWeight: FontWeight.w700,
-            letterSpacing: -1.2,
-          ),
-          headlineSmall: TextStyle(
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.8,
-          ),
-          titleMedium: TextStyle(
-            fontWeight: FontWeight.w600,
-            letterSpacing: -0.2,
-          ),
         ),
       ),
       home: const FolderExplosionDemo(),
@@ -42,7 +33,9 @@ class FolderExplosionApp extends StatelessWidget {
 }
 
 class FolderExplosionDemo extends StatefulWidget {
-  const FolderExplosionDemo({super.key});
+  const FolderExplosionDemo({super.key, this.autoPlay = true});
+
+  final bool autoPlay;
 
   @override
   State<FolderExplosionDemo> createState() => _FolderExplosionDemoState();
@@ -51,29 +44,75 @@ class FolderExplosionDemo extends StatefulWidget {
 class _FolderExplosionDemoState extends State<FolderExplosionDemo>
     with SingleTickerProviderStateMixin {
   late final AnimationController _controller;
+  Timer? _loopTimer;
+  bool _manualOverride = false;
+
+  static const _openDuration = Duration(milliseconds: 2500);
+  static const _closeDuration = Duration(milliseconds: 1850);
+  static const _holdOpen = Duration(milliseconds: 2800);
+  static const _holdClosed = Duration(milliseconds: 2200);
 
   @override
   void initState() {
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1180),
+      duration: _openDuration,
     );
+    if (widget.autoPlay) {
+      _loopTimer = Timer(const Duration(milliseconds: 1100), _runLoop);
+    }
   }
 
   @override
   void dispose() {
+    _loopTimer?.cancel();
     _controller.dispose();
     super.dispose();
   }
 
-  void _toggle() {
-    final target = _controller.value < 0.5 ? 1.0 : 0.0;
-    _controller.animateTo(
+  Future<void> _runLoop() async {
+    _loopTimer?.cancel();
+    if (!mounted || _manualOverride) return;
+
+    await _animateTo(1);
+    if (!mounted || _manualOverride) return;
+
+    _loopTimer = Timer(_holdOpen, () async {
+      if (!mounted || _manualOverride) return;
+
+      await _animateTo(0);
+      if (!mounted || _manualOverride) return;
+
+      _loopTimer = Timer(_holdClosed, () {
+        if (mounted && !_manualOverride) {
+          _runLoop();
+        }
+      });
+    });
+  }
+
+  Future<void> _animateTo(double target) {
+    final opening = target > _controller.value;
+    return _controller.animateTo(
       target,
-      duration: Duration(milliseconds: target > _controller.value ? 1180 : 880),
-      curve: Curves.easeInOutCubic,
+      duration: opening ? _openDuration : _closeDuration,
+      curve: opening ? _easeOpen : _easeClose,
     );
+  }
+
+  void _toggle() {
+    _loopTimer?.cancel();
+    _manualOverride = true;
+    final opening = _controller.value < 0.5;
+    _animateTo(opening ? 1 : 0).then((_) {
+      if (!mounted) return;
+      _manualOverride = false;
+      _loopTimer = Timer(
+        Duration(milliseconds: opening ? _holdOpen.inMilliseconds : 1600),
+        _runLoop,
+      );
+    });
   }
 
   @override
@@ -82,78 +121,29 @@ class _FolderExplosionDemoState extends State<FolderExplosionDemo>
       body: AnimatedBuilder(
         animation: _controller,
         builder: (context, _) {
-          final progress = Curves.easeInOutCubic.transform(_controller.value);
-          final open = progress > 0.5;
+          final progress = _controller.value;
+          final open = progress > 0.52;
 
           return Stack(
+            fit: StackFit.expand,
             children: [
-              Positioned.fill(child: _ExplosionBackdrop(progress: progress)),
+              _DeskBackdrop(progress: progress),
+              LayoutBuilder(
+                builder: (context, constraints) {
+                  return _FolderStage(
+                    progress: progress,
+                    open: open,
+                    size: constraints.biggest,
+                    onTap: _toggle,
+                  );
+                },
+              ),
               SafeArea(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  'Folder Explosion',
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .headlineMedium
-                                      ?.copyWith(
-                                        fontSize: 34,
-                                        color: const Color(0xFF241A11),
-                                      ),
-                                ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Tap the folder to scatter the files.',
-                                  style: Theme.of(context).textTheme.titleMedium
-                                      ?.copyWith(
-                                        color: const Color(0xFF6E6358),
-                                        height: 1.3,
-                                      ),
-                                ),
-                              ],
-                            ),
-                          ),
-                          _StatusChip(open: open),
-                        ],
-                      ),
-                      const Spacer(),
-                      Center(
-                        child: ConstrainedBox(
-                          constraints: const BoxConstraints(
-                            maxWidth: 760,
-                            maxHeight: 390,
-                          ),
-                          child: LayoutBuilder(
-                            builder: (context, constraints) {
-                              return _FolderStage(
-                                progress: progress,
-                                open: open,
-                                size: constraints.biggest,
-                                onTap: _toggle,
-                              );
-                            },
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 22),
-                      Text(
-                        open
-                            ? 'Open state: files are spread across the canvas.'
-                            : 'Closed state: all files are tucked into the folder.',
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(color: const Color(0xFF6E6358)),
-                      ),
-                    ],
+                child: Align(
+                  alignment: Alignment.topRight,
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 14, right: 18),
+                    child: _RecordBadge(open: open),
                   ),
                 ),
               ),
@@ -180,97 +170,130 @@ class _FolderStage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final center = Offset(size.width * 0.5, size.height * 0.56);
-    final stageWidth = math.max(size.width, 360.0);
-    final stageHeight = math.max(size.height, 320.0);
+    final shortest = math.min(size.width, size.height);
+    final scale = (shortest / 680).clamp(0.72, 1.18);
+    final maxCardWidth = 134.0 * scale;
+    final maxCardHeight = 158.0 * scale;
+    final horizontalReach =
+        (size.width / 2) - (maxCardWidth / 2) - (24 * scale);
+    final verticalReach =
+        (size.height / 2) - (maxCardHeight / 2) - (48 * scale);
+    final spread = math.min(
+      shortest * 0.36,
+      math.min(horizontalReach / 1.02, verticalReach / 0.88),
+    ).clamp(96.0 * scale, shortest * 0.42);
+    final center = Offset(size.width * 0.5, size.height * 0.5);
+    final folderOnTop = progress < 0.42;
+
+    final folder = _MacFolder(
+      progress: progress,
+      open: open,
+      scale: scale,
+    );
+
+    final sortedCards = [..._folderCards]
+      ..sort(
+        (a, b) => _cardDepth(a, progress).compareTo(_cardDepth(b, progress)),
+      );
+    final cards = sortedCards
+        .map(
+          (card) => _ExplosionCard(
+            key: Key('folder-card-${card.id}'),
+            card: card,
+            progress: progress,
+            center: center,
+            spread: spread,
+            scale: scale,
+          ),
+        )
+        .toList();
 
     return GestureDetector(
       key: const Key('folder-explosion-toggle'),
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
-      child: SizedBox(
-        width: stageWidth,
-        height: stageHeight,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Positioned.fill(
-              child: CustomPaint(
-                painter: _ExplosionRaysPainter(progress: progress),
-              ),
-            ),
-            ..._folderCards.map(
-              (card) => _ExplosionCard(
-                key: Key('folder-card-${card.id}'),
-                card: card,
+      child: Stack(
+        clipBehavior: Clip.none,
+        alignment: Alignment.center,
+        children: [
+          Positioned.fill(
+            child: CustomPaint(
+              painter: _StageGlowPainter(
                 progress: progress,
                 center: center,
               ),
             ),
-            Positioned.fill(
-              child: Align(
-                alignment: Alignment.center,
-                child: _FolderShell(progress: progress, open: open),
-              ),
-            ),
+          ),
+          if (!folderOnTop) ...[
+            Align(child: folder),
+            ...cards,
+          ] else ...[
+            ...cards,
+            Align(child: folder),
           ],
-        ),
+        ],
       ),
     );
   }
 }
 
-class _FolderShell extends StatelessWidget {
-  const _FolderShell({required this.progress, required this.open});
+double _cardDepth(_FolderCardSpec card, double progress) {
+  final scatter = _cardScatterProgress(progress, card.delay);
+  return card.delay + scatter * 0.35;
+}
+
+class _MacFolder extends StatelessWidget {
+  const _MacFolder({
+    required this.progress,
+    required this.open,
+    required this.scale,
+  });
 
   final double progress;
   final bool open;
+  final double scale;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 290,
-      height: 220,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          CustomPaint(
-            size: const Size(290, 220),
-            painter: _FolderPainter(progress: progress),
-          ),
-          Positioned(
-            left: 48,
-            right: 48,
-            bottom: 22,
-            child: AnimatedOpacity(
-              opacity: open ? 0.95 : 0.82,
-              duration: const Duration(milliseconds: 180),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(
-                    open ? 'EXPANDED' : 'CLOSED',
-                    key: const Key('folder-shell-state'),
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      letterSpacing: 2.2,
-                      color: const Color(0xFF5F4D39),
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Project Files',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontSize: 18,
-                      color: const Color(0xFF281D13),
-                    ),
-                  ),
-                ],
+    final settle = _easeOpen.transform(progress);
+    final lift = lerpDouble(0, -14 * scale, settle)!;
+    final folderScale = lerpDouble(1, 0.93, Curves.easeOut.transform(progress))!;
+
+    return Transform.translate(
+      offset: Offset(0, lift),
+      child: Transform.scale(
+        scale: folderScale * scale,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            SizedBox(
+              width: 340,
+              height: 268,
+              child: CustomPaint(
+                size: const Size(340, 268),
+                painter: _MacFolderPainter(progress: progress),
               ),
             ),
-          ),
-        ],
+            SizedBox(height: 10 * scale),
+            Opacity(
+              opacity: lerpDouble(1, 0.82, progress)!,
+              child: Text(
+                open ? '6 items' : 'Project Files',
+                key: const Key('folder-shell-state'),
+                textAlign: TextAlign.center,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: (open ? 13 : 15) * scale.clamp(0.85, 1.0),
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: open ? 0.1 : -0.2,
+                  color: const Color(0xFF3D3018),
+                  height: 1.1,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -282,30 +305,47 @@ class _ExplosionCard extends StatelessWidget {
     required this.card,
     required this.progress,
     required this.center,
+    required this.spread,
+    required this.scale,
   });
 
   final _FolderCardSpec card;
   final double progress;
   final Offset center;
+  final double spread;
+  final double scale;
 
   @override
   Widget build(BuildContext context) {
-    final cardProgress = _cardProgress(progress, card.delay);
-    final eased = Curves.easeOutCubic.transform(cardProgress);
-    final radius = lerpDouble(16, card.radius, eased)!;
+    final scatter = _cardScatterProgress(progress, card.delay);
+    final travel = Curves.easeInOutCubic.transform(scatter);
+    final settle = Curves.easeInOutCubic.transform(scatter);
+
+    final radius = lerpDouble(6, spread * card.radiusFactor, travel)!;
+    final arcLift = math.sin(travel * math.pi) * card.lift * scale;
     final drift = Offset(
       math.cos(card.angle) * radius,
-      math.sin(card.angle) * radius * 0.78,
+      math.sin(card.angle) * radius * 0.82 - arcLift,
     );
-    final offset = Offset.lerp(card.closedOffset, drift, eased)!;
-    final rotation = lerpDouble(card.closedRotation, card.rotation, eased)!;
-    final scale = lerpDouble(0.88, 1.0, eased)!;
-    final opacity = lerpDouble(
-      0.12,
-      1.0,
-      Curves.easeOut.transform(cardProgress),
+    final offset = Offset.lerp(card.closedOffset * scale, drift, travel)!;
+    final rotation = lerpDouble(
+      card.closedRotation,
+      card.rotation,
+      Curves.easeOutCubic.transform(travel),
     )!;
-    final cardSize = Size.lerp(card.closedSize, card.openSize, eased)!;
+    final cardScale = lerpDouble(0.68, card.openScale, settle)! * scale;
+    final opacity = lerpDouble(
+      0.06,
+      1.0,
+      Curves.easeInOutCubic.transform(scatter),
+    )!;
+    final cardSize = Size.lerp(
+      Size(card.closedSize.width * scale, card.closedSize.height * scale),
+      Size(card.openSize.width * scale, card.openSize.height * scale),
+      travel,
+    )!;
+    final shadowBlur = lerpDouble(4, 22, travel)! * scale;
+    final shadowYOffset = lerpDouble(1, 14, travel)! * scale;
 
     return Positioned(
       left: center.dx + offset.dx - cardSize.width / 2,
@@ -316,11 +356,14 @@ class _ExplosionCard extends StatelessWidget {
           child: Transform.rotate(
             angle: rotation,
             child: Transform.scale(
-              scale: scale,
-              child: _FileCardWidget(
+              scale: cardScale / scale,
+              child: _DocumentCard(
                 card: card,
-                size: cardSize,
-                progress: eased,
+                width: cardSize.width / scale,
+                height: cardSize.height / scale,
+                progress: travel,
+                shadowBlur: shadowBlur / scale,
+                shadowYOffset: shadowYOffset / scale,
               ),
             ),
           ),
@@ -330,450 +373,629 @@ class _ExplosionCard extends StatelessWidget {
   }
 }
 
-class _FileCardWidget extends StatelessWidget {
-  const _FileCardWidget({
+class _DocumentCard extends StatelessWidget {
+  const _DocumentCard({
     required this.card,
-    required this.size,
+    required this.width,
+    required this.height,
     required this.progress,
+    required this.shadowBlur,
+    required this.shadowYOffset,
   });
 
   final _FolderCardSpec card;
-  final Size size;
+  final double width;
+  final double height;
   final double progress;
+  final double shadowBlur;
+  final double shadowYOffset;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: size.width,
-      height: size.height,
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFFBF5),
-        borderRadius: BorderRadius.circular(22),
-        boxShadow: [
-          BoxShadow(
-            color: card.color.withValues(alpha: 0.18),
-            blurRadius: 24,
-            offset: const Offset(0, 12),
-          ),
-          const BoxShadow(
-            color: Color(0x1A2C2014),
-            blurRadius: 20,
-            offset: Offset(0, 8),
-          ),
-        ],
-      ),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(22),
-        child: CustomPaint(
-          painter: _FileCardPainter(card: card, progress: progress),
-          child: Padding(
-            padding: const EdgeInsets.all(12),
-            child: FittedBox(
-              fit: BoxFit.scaleDown,
-              alignment: Alignment.topLeft,
-              child: SizedBox(
-                width: 130,
-                height: 92,
-                child: _FileCardFace(card: card),
-              ),
+    return SizedBox(
+      width: width,
+      height: height,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          boxShadow: [
+            BoxShadow(
+              color: const Color(0xFF1A140E).withValues(alpha: 0.16),
+              blurRadius: shadowBlur,
+              offset: Offset(0, shadowYOffset),
             ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _FileCardFace extends StatelessWidget {
-  const _FileCardFace({required this.card});
-
-  final _FolderCardSpec card;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Container(
-              width: 28,
-              height: 28,
-              decoration: BoxDecoration(
-                color: card.color.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Icon(card.icon, size: 16, color: card.color),
-            ),
-            const Spacer(),
-            Container(
-              width: 18,
-              height: 18,
-              decoration: BoxDecoration(
-                color: card.color.withValues(alpha: 0.14),
-                shape: BoxShape.circle,
-              ),
+            BoxShadow(
+              color: card.accent.withValues(alpha: 0.12),
+              blurRadius: shadowBlur * 0.6,
+              offset: Offset(0, shadowYOffset * 0.45),
             ),
           ],
         ),
-        const Spacer(),
-        Text(
-          card.name,
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-          style: Theme.of(context).textTheme.titleMedium?.copyWith(
-            fontSize: 16,
-            color: const Color(0xFF22180F),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: ColoredBox(
+            color: const Color(0xFFFAFAF8),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(
+                  height: height * 0.68,
+                  child: CustomPaint(
+                    painter: _DocumentPreviewPainter(
+                      kind: card.kind,
+                      accent: card.accent,
+                      progress: progress,
+                    ),
+                  ),
+                ),
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(10, 7, 10, 8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          card.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            fontSize: 11.5,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: -0.15,
+                            color: Color(0xFF1C1712),
+                            height: 1.1,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          card.detail,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: const Color(0xFF6A6258).withValues(alpha: 0.9),
+                            height: 1.1,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
-        const SizedBox(height: 4),
-        Text(
-          card.detail,
-          style: Theme.of(
-            context,
-          ).textTheme.labelMedium?.copyWith(color: const Color(0xFF6C6258)),
-        ),
-      ],
+      ),
     );
   }
 }
 
-class _StatusChip extends StatelessWidget {
-  const _StatusChip({required this.open});
+class _RecordBadge extends StatelessWidget {
+  const _RecordBadge({required this.open});
 
   final bool open;
 
   @override
   Widget build(BuildContext context) {
     return AnimatedContainer(
-      duration: const Duration(milliseconds: 250),
-      curve: Curves.easeOutCubic,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      duration: const Duration(milliseconds: 320),
+      curve: _easeOpen,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
-        color: open ? const Color(0xFFF8DFAE) : const Color(0xFFE5ECF5),
+        color: Colors.white.withValues(alpha: 0.72),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: open ? const Color(0xFFE5B95E) : const Color(0xFFCBD6E2),
-        ),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.85)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
+          ),
+        ],
       ),
-      child: Text(
-        open ? 'OPEN' : 'CLOSED',
-        key: const Key('folder-status-text'),
-        style: Theme.of(context).textTheme.labelLarge?.copyWith(
-          letterSpacing: 1.6,
-          color: const Color(0xFF50371A),
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          AnimatedContainer(
+            duration: const Duration(milliseconds: 320),
+            width: 7,
+            height: 7,
+            decoration: BoxDecoration(
+              color: open ? const Color(0xFFE39D3B) : const Color(0xFF8AA0B8),
+              shape: BoxShape.circle,
+            ),
+          ),
+          const SizedBox(width: 7),
+          Text(
+            open ? 'OPEN' : 'CLOSED',
+            key: const Key('folder-status-text'),
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 1.1,
+              color: Color(0xFF4A3A28),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _ExplosionBackdrop extends StatelessWidget {
-  const _ExplosionBackdrop({required this.progress});
+class _DeskBackdrop extends StatelessWidget {
+  const _DeskBackdrop({required this.progress});
 
   final double progress;
 
   @override
   Widget build(BuildContext context) {
-    final glow = Color.lerp(
-      const Color(0xFFF7EFE0),
-      const Color(0xFFFDF4EA),
-      progress,
-    )!;
+    final warm = Curves.easeOutCubic.transform(progress);
 
     return DecoratedBox(
       decoration: BoxDecoration(
         gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [const Color(0xFFF7F1E7), glow, const Color(0xFFF0ECE2)],
-          stops: const [0, 0.52, 1],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            Color.lerp(
+              const Color(0xFFECE6DC),
+              const Color(0xFFF3EBE0),
+              warm,
+            )!,
+            Color.lerp(
+              const Color(0xFFD9D0C4),
+              const Color(0xFFE4D8C8),
+              warm,
+            )!,
+            const Color(0xFFCFC4B6),
+          ],
+          stops: const [0, 0.55, 1],
         ),
       ),
       child: CustomPaint(
-        painter: _BackdropPainter(progress: progress),
+        painter: _DeskPainter(progress: progress),
         child: const SizedBox.expand(),
       ),
     );
   }
 }
 
-class _BackdropPainter extends CustomPainter {
-  const _BackdropPainter({required this.progress});
+class _DeskPainter extends CustomPainter {
+  const _DeskPainter({required this.progress});
 
   final double progress;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paint = Paint()..style = PaintingStyle.fill;
-    final haze = [
-      _Orb(
-        center: Offset(size.width * 0.12, size.height * 0.18),
-        radius: size.shortestSide * 0.24,
-        color: const Color(0xFFCCE6F4).withValues(alpha: 0.34),
-      ),
-      _Orb(
-        center: Offset(size.width * 0.84, size.height * 0.18),
-        radius: size.shortestSide * 0.22,
-        color: const Color(0xFFF6D4B7).withValues(alpha: 0.30),
-      ),
-      _Orb(
-        center: Offset(size.width * 0.84, size.height * 0.82),
-        radius: size.shortestSide * 0.20,
-        color: const Color(0xFFD9E9D7).withValues(alpha: 0.24),
-      ),
-    ];
+    final horizon = size.height * 0.68;
+    final surfacePaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          const Color(0xFFD8CFC2).withValues(alpha: 0.0),
+          const Color(0xFFB8AEA0).withValues(alpha: 0.22),
+        ],
+      ).createShader(Rect.fromLTWH(0, horizon, size.width, size.height - horizon));
+    canvas.drawRect(
+      Rect.fromLTWH(0, horizon, size.width, size.height - horizon),
+      surfacePaint,
+    );
 
-    for (final orb in haze) {
-      paint.shader = RadialGradient(
-        colors: [orb.color, orb.color.withValues(alpha: 0)],
-      ).createShader(Rect.fromCircle(center: orb.center, radius: orb.radius));
-      canvas.drawCircle(orb.center, orb.radius, paint);
-    }
-
-    final gridPaint = Paint()
-      ..color = const Color(0xFFB7A28A).withValues(alpha: 0.06)
-      ..strokeWidth = 1;
-
-    const spacing = 42.0;
-    for (var x = 0.0; x <= size.width; x += spacing) {
-      canvas.drawLine(Offset(x, 0), Offset(x, size.height), gridPaint);
-    }
-    for (var y = 0.0; y <= size.height; y += spacing) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), gridPaint);
-    }
-
-    final dotPaint = Paint()
-      ..color = const Color(0xFF8D7662).withValues(alpha: 0.08);
-    for (var i = 0; i < 40; i++) {
-      final dx = (i * 37.0) % size.width;
-      final dy = (i * 61.0) % size.height;
-      canvas.drawCircle(Offset(dx, dy), 1.2 + (i % 3) * 0.4, dotPaint);
-    }
+    final vignette = Paint()
+      ..shader = RadialGradient(
+        center: Alignment(0, 0.2),
+        radius: 1.1,
+        colors: [
+          Colors.transparent,
+          const Color(0xFF2A2118).withValues(alpha: 0.08),
+        ],
+      ).createShader(Offset.zero & size);
+    canvas.drawRect(Offset.zero & size, vignette);
   }
 
   @override
-  bool shouldRepaint(covariant _BackdropPainter oldDelegate) {
+  bool shouldRepaint(covariant _DeskPainter oldDelegate) {
     return oldDelegate.progress != progress;
   }
 }
 
-class _ExplosionRaysPainter extends CustomPainter {
-  const _ExplosionRaysPainter({required this.progress});
+class _StageGlowPainter extends CustomPainter {
+  const _StageGlowPainter({required this.progress, required this.center});
 
   final double progress;
+  final Offset center;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width * 0.5, size.height * 0.56);
-    final rays = Paint()
-      ..color = const Color(0xFFD8A15B).withValues(alpha: 0.18 * progress)
-      ..strokeCap = StrokeCap.round
-      ..strokeWidth = 3;
+    final burst = Curves.easeOutCubic.transform(progress);
+    final collapse = Curves.easeInCubic.transform(1 - progress);
+    final intensity = progress < 0.5 ? burst : collapse;
+    if (intensity < 0.02) return;
 
-    for (var i = 0; i < 10; i++) {
-      final angle = -math.pi * 0.8 + (math.pi * 1.6 / 9) * i;
-      final length = lerpDouble(
-        18,
-        180,
-        Curves.easeOutCubic.transform(progress),
-      )!;
-      final start = center + Offset(math.cos(angle) * 14, math.sin(angle) * 14);
-      final end =
-          center + Offset(math.cos(angle) * length, math.sin(angle) * length);
-      canvas.drawLine(start, end, rays);
-    }
-
-    final sparkPaint = Paint()
-      ..color = const Color(0xFFE8B56E).withValues(alpha: 0.55 * progress);
-    for (var i = 0; i < 16; i++) {
-      final t = i / 16;
-      final angle = -math.pi + t * math.pi * 2;
-      final radius = lerpDouble(6, 166, Curves.easeOut.transform(progress))!;
-      final offset =
-          center +
-          Offset(math.cos(angle) * radius, math.sin(angle) * radius * 0.72);
-      canvas.drawCircle(offset, 1.6 + (i % 4) * 0.3, sparkPaint);
-    }
+    final glow = Paint()
+      ..shader = RadialGradient(
+        colors: [
+          const Color(0xFFF4C66D).withValues(alpha: 0.14 * intensity),
+          const Color(0xFFF4C66D).withValues(alpha: 0),
+        ],
+      ).createShader(
+        Rect.fromCircle(
+          center: center,
+          radius: lerpDouble(30, size.shortestSide * 0.34, intensity)!,
+        ),
+      );
+    canvas.drawCircle(
+      center,
+      lerpDouble(30, size.shortestSide * 0.34, intensity)!,
+      glow,
+    );
   }
 
   @override
-  bool shouldRepaint(covariant _ExplosionRaysPainter oldDelegate) {
-    return oldDelegate.progress != progress;
+  bool shouldRepaint(covariant _StageGlowPainter oldDelegate) {
+    return oldDelegate.progress != progress || oldDelegate.center != center;
   }
 }
 
-class _FolderPainter extends CustomPainter {
-  const _FolderPainter({required this.progress});
+class _MacFolderPainter extends CustomPainter {
+  const _MacFolderPainter({required this.progress});
 
   final double progress;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final bodyRect = Rect.fromLTWH(28, 72, size.width - 56, size.height - 94);
-    final bodyRRect = RRect.fromRectAndRadius(
-      bodyRect,
-      const Radius.circular(26),
+    final open = _easeOpen.transform(progress);
+
+    final backRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(34, 58, size.width - 68, size.height - 92),
+      const Radius.circular(18),
+    );
+    final backPaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Color.lerp(
+            const Color(0xFFF0D278),
+            const Color(0xFFE8BC4E),
+            open * 0.4,
+          )!,
+          const Color(0xFFD89E34),
+        ],
+      ).createShader(backRect.outerRect);
+    canvas.drawRRect(backRect.shift(const Offset(0, 4)), backPaint);
+
+    final tabPath = Path()
+      ..moveTo(58, 58)
+      ..lineTo(118, 58)
+      ..lineTo(132, 42)
+      ..lineTo(188, 42)
+      ..lineTo(202, 58)
+      ..lineTo(248, 58)
+      ..lineTo(248, 78)
+      ..lineTo(58, 78)
+      ..close();
+    final tabPaint = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFFF6DE8E), Color(0xFFEAB84A)],
+      ).createShader(Rect.fromLTWH(58, 42, 190, 36));
+    canvas.drawPath(tabPath, tabPaint);
+
+    final bodyRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(28, 74, size.width - 56, size.height - 98),
+      const Radius.circular(22),
+    );
+    canvas.drawRRect(
+      bodyRect.shift(const Offset(0, 12)),
+      Paint()
+        ..color = const Color(0xFF8F5A1D).withValues(alpha: 0.22)
+        ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 20),
     );
 
     final bodyPaint = Paint()
       ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
         colors: [
-          const Color(0xFFF4C66D),
+          const Color(0xFFFBE097),
           Color.lerp(
-            const Color(0xFFE9A93E),
-            const Color(0xFFD98B31),
-            progress,
+            const Color(0xFFEFB84A),
+            const Color(0xFFE39D3B),
+            open,
           )!,
+          const Color(0xFFD68928),
         ],
-      ).createShader(bodyRect);
+        stops: const [0, 0.48, 1],
+      ).createShader(bodyRect.outerRect);
+    canvas.drawRRect(bodyRect, bodyPaint);
 
-    final shadowPaint = Paint()
-      ..color = const Color(0xFF8F5A1D).withValues(alpha: 0.28)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 14);
+    final pocketRect = RRect.fromRectAndRadius(
+      Rect.fromLTWH(46, 112, size.width - 92, size.height - 148),
+      const Radius.circular(16),
+    );
+    canvas.drawRRect(
+      pocketRect,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            const Color(0xFF8A5A18).withValues(alpha: 0.18),
+            const Color(0xFF6E4510).withValues(alpha: 0.34 + open * 0.08),
+          ],
+        ).createShader(pocketRect.outerRect),
+    );
 
-    canvas.drawRRect(bodyRRect.shift(const Offset(0, 8)), shadowPaint);
-    canvas.drawRRect(bodyRRect, bodyPaint);
-
-    final lipPath = Path()
-      ..moveTo(40, 90)
-      ..lineTo(112, 90)
-      ..lineTo(130, 68)
-      ..lineTo(size.width - 40, 68)
-      ..lineTo(size.width - 40, 106)
-      ..lineTo(40, 106)
-      ..close();
-    final lipPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [
-          const Color(0xFFF8D98B),
-          Color.lerp(
-            const Color(0xFFE8B34F),
-            const Color(0xFFD98C32),
-            progress,
-          )!,
-        ],
-      ).createShader(Rect.fromLTWH(40, 68, size.width - 80, 38));
-    canvas.drawPath(lipPath, lipPaint);
+    final flapOpen = Curves.easeInOutCubic.transform(
+      (progress / 0.48).clamp(0.0, 1.0),
+    );
+    final flapClose = _easeClose.transform(
+      ((progress - 0.52) / 0.48).clamp(0.0, 1.0),
+    );
+    final flapProgress = progress < 0.52 ? flapOpen : 1 - flapClose;
 
     final flapPaint = Paint()
       ..shader = LinearGradient(
         begin: Alignment.topLeft,
         end: Alignment.bottomRight,
         colors: [
-          const Color(0xFFFDE2A7),
+          const Color(0xFFFFF2C4),
           Color.lerp(
-            const Color(0xFFF0BB63),
+            const Color(0xFFF2C35E),
             const Color(0xFFE39D3B),
-            progress,
+            open,
           )!,
         ],
-      ).createShader(Rect.fromLTWH(40, 52, size.width - 90, 46));
+      ).createShader(Rect.fromLTWH(40, 70, size.width - 80, 56));
+
     canvas.save();
-    canvas.translate(58, 70);
-    canvas.rotate(
-      lerpDouble(0.0, -0.42, Curves.easeInOutCubic.transform(progress))!,
-    );
-    canvas.translate(-58, -70);
+    canvas.translate(72, 88);
+    canvas.rotate(lerpDouble(0.04, -0.58, flapProgress)!);
+    canvas.translate(-72, -88);
     final flapPath = Path()
-      ..moveTo(40, 76)
-      ..lineTo(118, 76)
-      ..lineTo(136, 54)
-      ..lineTo(size.width - 62, 54)
-      ..lineTo(size.width - 48, 90)
-      ..lineTo(40, 90)
+      ..moveTo(40, 92)
+      ..lineTo(132, 92)
+      ..lineTo(152, 66)
+      ..lineTo(size.width - 52, 66)
+      ..lineTo(size.width - 36, 104)
+      ..lineTo(40, 104)
       ..close();
-    canvas.drawShadow(flapPath, const Color(0xAA8F5A1D), 10, false);
+    canvas.drawShadow(flapPath, const Color(0x558F5A1D), 14, false);
     canvas.drawPath(flapPath, flapPaint);
     canvas.restore();
 
-    final insetPaint = Paint()
-      ..color = const Color(0xFF9F6C1F).withValues(alpha: 0.22);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(44, 114, size.width - 88, size.height - 142),
-        const Radius.circular(18),
-      ),
-      insetPaint,
-    );
-
-    final highlightPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.25);
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(
-        Rect.fromLTWH(40, 78, size.width - 120, 16),
-        const Radius.circular(8),
-      ),
-      highlightPaint,
-    );
+    final edgePaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1
+      ..color = const Color(0xFF9F6C1F).withValues(alpha: 0.16);
+    canvas.drawRRect(bodyRect.deflate(0.5), edgePaint);
   }
 
   @override
-  bool shouldRepaint(covariant _FolderPainter oldDelegate) {
+  bool shouldRepaint(covariant _MacFolderPainter oldDelegate) {
     return oldDelegate.progress != progress;
   }
 }
 
-class _FileCardPainter extends CustomPainter {
-  const _FileCardPainter({required this.card, required this.progress});
+enum _DocumentKind { imageGrid, textDoc, pdf, photoStack, archive, markdown }
 
-  final _FolderCardSpec card;
+class _DocumentPreviewPainter extends CustomPainter {
+  const _DocumentPreviewPainter({
+    required this.kind,
+    required this.accent,
+    required this.progress,
+  });
+
+  final _DocumentKind kind;
+  final Color accent;
   final double progress;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final paperPaint = Paint()
-      ..shader = LinearGradient(
-        begin: Alignment.topLeft,
-        end: Alignment.bottomRight,
-        colors: [
-          card.color.withValues(alpha: 0.08),
-          Colors.white.withValues(alpha: 0.0),
-        ],
-      ).createShader(Offset.zero & size);
-
-    canvas.drawRRect(
-      RRect.fromRectAndRadius(Offset.zero & size, const Radius.circular(22)),
-      paperPaint,
+    canvas.drawRect(
+      Offset.zero & size,
+      Paint()
+        ..shader = LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [
+            accent.withValues(alpha: 0.08),
+            const Color(0xFFF5F5F2),
+          ],
+        ).createShader(Offset.zero & size),
     );
 
-    final foldPaint = Paint()..color = card.color.withValues(alpha: 0.24);
-    final fold = Path()
-      ..moveTo(size.width - 26, 0)
-      ..lineTo(size.width, 0)
-      ..lineTo(size.width, 26)
-      ..close();
-    canvas.drawPath(fold, foldPaint);
+    switch (kind) {
+      case _DocumentKind.imageGrid:
+        _paintImageGrid(canvas, size);
+      case _DocumentKind.textDoc:
+        _paintTextDoc(canvas, size);
+      case _DocumentKind.pdf:
+        _paintPdf(canvas, size);
+      case _DocumentKind.photoStack:
+        _paintPhotoStack(canvas, size);
+      case _DocumentKind.archive:
+        _paintArchive(canvas, size);
+      case _DocumentKind.markdown:
+        _paintMarkdown(canvas, size);
+    }
+  }
 
-    final linesPaint = Paint()
-      ..strokeWidth = 2
+  void _paintImageGrid(Canvas canvas, Size size) {
+    const gap = 6.0;
+    final cellW = (size.width - gap * 4) / 3;
+    final cellH = (size.height - gap * 3) / 2;
+    final colors = [
+      accent.withValues(alpha: 0.55),
+      accent.withValues(alpha: 0.35),
+      const Color(0xFF88B4C8),
+      const Color(0xFFD4A574),
+      accent.withValues(alpha: 0.45),
+      const Color(0xFF9CB896),
+    ];
+    for (var i = 0; i < 6; i++) {
+      final col = i % 3;
+      final row = i ~/ 3;
+      final rect = RRect.fromRectAndRadius(
+        Rect.fromLTWH(
+          gap + col * (cellW + gap),
+          gap + row * (cellH + gap),
+          cellW,
+          cellH,
+        ),
+        const Radius.circular(4),
+      );
+      canvas.drawRRect(rect, Paint()..color = colors[i]);
+    }
+  }
+
+  void _paintTextDoc(Canvas canvas, Size size) {
+    final linePaint = Paint()
+      ..color = const Color(0xFF2A241E).withValues(alpha: 0.14)
       ..strokeCap = StrokeCap.round
-      ..color = card.color.withValues(alpha: 0.26);
+      ..strokeWidth = 2.2;
+    for (var i = 0; i < 7; i++) {
+      final y = 16 + i * 11.0;
+      final width = size.width * (0.78 - (i % 3) * 0.08);
+      canvas.drawLine(Offset(14, y), Offset(14 + width, y), linePaint);
+    }
+    canvas.drawRRect(
+      RRect.fromRectAndRadius(
+        Rect.fromLTWH(14, 8, 42, 5),
+        const Radius.circular(2),
+      ),
+      Paint()..color = accent.withValues(alpha: 0.65),
+    );
+  }
 
-    final lineCount = 3 + (progress * 2).floor();
-    for (var i = 0; i < lineCount; i++) {
-      final y = 44.0 + i * 12.0;
+  void _paintPdf(Canvas canvas, Size size) {
+    _paintTextDoc(canvas, size);
+    final badge = RRect.fromRectAndRadius(
+      Rect.fromLTWH(size.width - 46, 10, 32, 14),
+      const Radius.circular(3),
+    );
+    canvas.drawRRect(badge, Paint()..color = const Color(0xFFE04B3A));
+    final text = TextPainter(
+      text: const TextSpan(
+        text: 'PDF',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 8,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 0.4,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout();
+    text.paint(
+      canvas,
+      Offset(size.width - 40, 12.5),
+    );
+  }
+
+  void _paintPhotoStack(Canvas canvas, Size size) {
+    final frames = [
+      (const Offset(18, 18), 0.04),
+      (const Offset(28, 12), -0.05),
+      (const Offset(38, 20), 0.02),
+    ];
+    for (final (offset, angle) in frames) {
+      canvas.save();
+      canvas.translate(offset.dx + 40, offset.dy + 30);
+      canvas.rotate(angle);
+      final rect = RRect.fromRectAndRadius(
+        const Rect.fromLTWH(-36, -28, 72, 56),
+        const Radius.circular(4),
+      );
+      canvas.drawRRect(
+        rect,
+        Paint()..color = const Color(0xFFFAFAF8),
+      );
+      canvas.drawRRect(
+        rect.deflate(4),
+        Paint()..color = accent.withValues(alpha: 0.35),
+      );
+      canvas.restore();
+    }
+  }
+
+  void _paintArchive(Canvas canvas, Size size) {
+    final body = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: Offset(size.width * 0.5, size.height * 0.52),
+        width: size.width * 0.46,
+        height: size.height * 0.42,
+      ),
+      const Radius.circular(6),
+    );
+    canvas.drawRRect(body, Paint()..color = accent.withValues(alpha: 0.22));
+    canvas.drawRRect(
+      body.deflate(6),
+      Paint()..color = const Color(0xFFFAFAF8),
+    );
+    final zipPaint = Paint()
+      ..color = accent
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+    canvas.drawLine(
+      Offset(size.width * 0.5, size.height * 0.34),
+      Offset(size.width * 0.5, size.height * 0.68),
+      zipPaint,
+    );
+    for (var i = 0; i < 4; i++) {
+      final y = size.height * 0.4 + i * 8;
       canvas.drawLine(
-        Offset(16, y),
-        Offset(size.width * (0.56 + i * 0.06), y),
-        linesPaint,
+        Offset(size.width * 0.44, y),
+        Offset(size.width * 0.56, y),
+        zipPaint..strokeWidth = 1.4,
+      );
+    }
+  }
+
+  void _paintMarkdown(Canvas canvas, Size size) {
+    final heading = TextPainter(
+      text: TextSpan(
+        text: '# Notes',
+        style: TextStyle(
+          color: accent.withValues(alpha: 0.85),
+          fontSize: 13,
+          fontWeight: FontWeight.w700,
+          letterSpacing: -0.2,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
+    )..layout(maxWidth: size.width - 24);
+    heading.paint(canvas, const Offset(14, 14));
+
+    final linePaint = Paint()
+      ..color = const Color(0xFF2A241E).withValues(alpha: 0.12)
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = 2;
+    for (var i = 0; i < 5; i++) {
+      final y = 38 + i * 10.0;
+      canvas.drawLine(
+        Offset(14, y),
+        Offset(size.width * (0.72 - i * 0.04), y),
+        linePaint,
       );
     }
   }
 
   @override
-  bool shouldRepaint(covariant _FileCardPainter oldDelegate) {
-    return oldDelegate.card != card || oldDelegate.progress != progress;
+  bool shouldRepaint(covariant _DocumentPreviewPainter oldDelegate) {
+    return oldDelegate.kind != kind ||
+        oldDelegate.accent != accent ||
+        oldDelegate.progress != progress;
   }
 }
 
-double _cardProgress(double progress, double delay) {
-  final started = ((progress - delay) / (1 - delay)).clamp(0.0, 1.0);
-  return Curves.easeOutCubic.transform(started);
+double _cardScatterProgress(double progress, double delay) {
+  if (progress <= delay) return 0;
+  final span = 1 - delay;
+  return ((progress - delay) / span).clamp(0.0, 1.0);
 }
 
 class _FolderCardSpec {
@@ -781,12 +1003,14 @@ class _FolderCardSpec {
     required this.id,
     required this.name,
     required this.detail,
-    required this.color,
-    required this.icon,
+    required this.accent,
+    required this.kind,
     required this.angle,
-    required this.radius,
+    required this.radiusFactor,
     required this.rotation,
     required this.delay,
+    required this.lift,
+    required this.openScale,
     required this.closedOffset,
     required this.closedRotation,
     required this.closedSize,
@@ -796,24 +1020,18 @@ class _FolderCardSpec {
   final String id;
   final String name;
   final String detail;
-  final Color color;
-  final IconData icon;
+  final Color accent;
+  final _DocumentKind kind;
   final double angle;
-  final double radius;
+  final double radiusFactor;
   final double rotation;
   final double delay;
+  final double lift;
+  final double openScale;
   final Offset closedOffset;
   final double closedRotation;
   final Size closedSize;
   final Size openSize;
-}
-
-class _Orb {
-  const _Orb({required this.center, required this.radius, required this.color});
-
-  final Offset center;
-  final double radius;
-  final Color color;
 }
 
 const List<_FolderCardSpec> _folderCards = [
@@ -821,90 +1039,102 @@ const List<_FolderCardSpec> _folderCards = [
     id: 'assets',
     name: 'Assets',
     detail: '12 files',
-    color: Color(0xFF2F8F8A),
-    icon: Icons.image_outlined,
-    angle: -2.5,
-    radius: 170,
-    rotation: -0.18,
-    delay: 0.00,
-    closedOffset: Offset(-26, -10),
+    accent: Color(0xFF2F8F8A),
+    kind: _DocumentKind.imageGrid,
+    angle: -2.60,
+    radiusFactor: 0.96,
+    rotation: -0.14,
+    delay: 0.18,
+    lift: 36,
+    openScale: 1.0,
+    closedOffset: Offset(-18, -4),
     closedRotation: -0.04,
-    closedSize: Size(110, 80),
-    openSize: Size(120, 86),
+    closedSize: Size(108, 132),
+    openSize: Size(128, 156),
   ),
   _FolderCardSpec(
     id: 'drafts',
     name: 'Drafts',
     detail: '6 docs',
-    color: Color(0xFFD6577D),
-    icon: Icons.edit_note_outlined,
-    angle: -1.7,
-    radius: 192,
-    rotation: -0.06,
-    delay: 0.06,
-    closedOffset: Offset(-6, -18),
+    accent: Color(0xFFD6577D),
+    kind: _DocumentKind.textDoc,
+    angle: -1.57,
+    radiusFactor: 1.0,
+    rotation: -0.07,
+    delay: 0.26,
+    lift: 40,
+    openScale: 1.02,
+    closedOffset: Offset(-4, -12),
     closedRotation: 0.02,
-    closedSize: Size(120, 84),
-    openSize: Size(126, 90),
+    closedSize: Size(112, 136),
+    openSize: Size(126, 152),
   ),
   _FolderCardSpec(
     id: 'invoice',
     name: 'Invoice.pdf',
     detail: '1.4 MB',
-    color: Color(0xFFE16E4B),
-    icon: Icons.description_outlined,
-    angle: -0.8,
-    radius: 176,
-    rotation: 0.16,
-    delay: 0.12,
-    closedOffset: Offset(20, -14),
+    accent: Color(0xFFE16E4B),
+    kind: _DocumentKind.pdf,
+    angle: -0.52,
+    radiusFactor: 0.98,
+    rotation: 0.12,
+    delay: 0.34,
+    lift: 34,
+    openScale: 0.98,
+    closedOffset: Offset(8, -8),
     closedRotation: 0.05,
-    closedSize: Size(112, 84),
-    openSize: Size(120, 88),
+    closedSize: Size(108, 132),
+    openSize: Size(122, 148),
   ),
   _FolderCardSpec(
     id: 'photos',
     name: 'Photos',
     detail: '24 items',
-    color: Color(0xFF4AA3D3),
-    icon: Icons.photo_outlined,
-    angle: 0.3,
-    radius: 202,
-    rotation: 0.22,
-    delay: 0.18,
-    closedOffset: Offset(14, 2),
+    accent: Color(0xFF4AA3D3),
+    kind: _DocumentKind.photoStack,
+    angle: 0.52,
+    radiusFactor: 0.96,
+    rotation: 0.16,
+    delay: 0.42,
+    lift: 38,
+    openScale: 1.04,
+    closedOffset: Offset(12, 0),
     closedRotation: -0.03,
-    closedSize: Size(124, 88),
-    openSize: Size(132, 94),
+    closedSize: Size(116, 140),
+    openSize: Size(132, 158),
   ),
   _FolderCardSpec(
     id: 'archive',
     name: 'Archive.zip',
     detail: '241 MB',
-    color: Color(0xFF7A5CFF),
-    icon: Icons.archive_outlined,
-    angle: 1.25,
-    radius: 180,
-    rotation: -0.12,
-    delay: 0.24,
-    closedOffset: Offset(-10, 14),
+    accent: Color(0xFF7A5CFF),
+    kind: _DocumentKind.archive,
+    angle: 1.57,
+    radiusFactor: 0.94,
+    rotation: -0.09,
+    delay: 0.50,
+    lift: 32,
+    openScale: 0.97,
+    closedOffset: Offset(6, 8),
     closedRotation: 0.04,
-    closedSize: Size(116, 84),
-    openSize: Size(124, 90),
+    closedSize: Size(110, 134),
+    openSize: Size(124, 150),
   ),
   _FolderCardSpec(
     id: 'notes',
     name: 'Notes.md',
     detail: '2 KB',
-    color: Color(0xFFB45BEA),
-    icon: Icons.notes_outlined,
-    angle: 2.05,
-    radius: 168,
-    rotation: 0.14,
-    delay: 0.30,
-    closedOffset: Offset(26, 10),
+    accent: Color(0xFFB45BEA),
+    kind: _DocumentKind.markdown,
+    angle: 2.60,
+    radiusFactor: 0.92,
+    rotation: 0.11,
+    delay: 0.58,
+    lift: 30,
+    openScale: 0.96,
+    closedOffset: Offset(-10, 6),
     closedRotation: -0.05,
-    closedSize: Size(110, 80),
-    openSize: Size(118, 86),
+    closedSize: Size(106, 130),
+    openSize: Size(118, 146),
   ),
 ];
