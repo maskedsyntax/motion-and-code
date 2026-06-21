@@ -5,10 +5,10 @@ A self-contained, center-focused carousel animation demo for Motion & Code.
 ## What It Shows
 
 - Effectively infinite looping with modular card data
-- Position-based scale, perspective rotation, opacity, and vertical offset
-- Five original gradient card designs drawn without image assets
+- Restrained position-based scale, perspective rotation, opacity, and offset
+- Five original flat-color card designs drawn without image assets
 - Auto-play that pauses during touch interaction
-- Animated labels and page indicators
+- Page-synchronized crossfading labels and indicators
 
 ## How To Run
 

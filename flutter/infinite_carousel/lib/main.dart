@@ -16,11 +16,11 @@ class InfiniteCarouselApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Infinite Carousel',
       theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF09090D),
+        brightness: Brightness.light,
+        scaffoldBackgroundColor: const Color(0xFFF5F1E9),
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFFFF735C),
-          brightness: Brightness.dark,
+          seedColor: const Color(0xFF276B61),
+          brightness: Brightness.light,
         ),
       ),
       home: const InfiniteCarouselDemo(),
@@ -42,48 +42,51 @@ class _InfiniteCarouselDemoState extends State<InfiniteCarouselDemo> {
       title: 'Aurora',
       category: 'Northern light',
       number: '01',
-      colors: [Color(0xFF163C3A), Color(0xFF4FD6A4), Color(0xFFE6FF8A)],
-      accent: Color(0xFFE8FF9A),
+      surface: Color(0xFFCBE7D8),
+      accent: Color(0xFF56A889),
+      ink: Color(0xFF173A32),
       icon: Icons.auto_awesome_rounded,
     ),
     CarouselItem(
       title: 'Lunar',
       category: 'Quiet orbit',
       number: '02',
-      colors: [Color(0xFF15172A), Color(0xFF5156A7), Color(0xFFD5CAFF)],
-      accent: Color(0xFFE2DCFF),
+      surface: Color(0xFFD9D6ED),
+      accent: Color(0xFF8982BE),
+      ink: Color(0xFF302D53),
       icon: Icons.nightlight_round,
     ),
     CarouselItem(
       title: 'Ember',
       category: 'After glow',
       number: '03',
-      colors: [Color(0xFF3D1712), Color(0xFFD6492D), Color(0xFFFFC266)],
-      accent: Color(0xFFFFD08A),
+      surface: Color(0xFFF2D2BC),
+      accent: Color(0xFFD97950),
+      ink: Color(0xFF5A2E21),
       icon: Icons.local_fire_department_rounded,
     ),
     CarouselItem(
       title: 'Tidal',
       category: 'Deep current',
       number: '04',
-      colors: [Color(0xFF071F32), Color(0xFF087E8B), Color(0xFF7DFFE7)],
-      accent: Color(0xFF8DFFEE),
+      surface: Color(0xFFC5E1E4),
+      accent: Color(0xFF4E9DA5),
+      ink: Color(0xFF163E46),
       icon: Icons.water_rounded,
     ),
     CarouselItem(
       title: 'Petal',
       category: 'Soft bloom',
       number: '05',
-      colors: [Color(0xFF32152C), Color(0xFFB83B73), Color(0xFFFFB4CC)],
-      accent: Color(0xFFFFC6D8),
+      surface: Color(0xFFEBCED8),
+      accent: Color(0xFFC46E8D),
+      ink: Color(0xFF542D3D),
       icon: Icons.local_florist_rounded,
     ),
   ];
 
   late final PageController _pageController;
   Timer? _autoPlayTimer;
-  int _currentPage = _initialPage;
-
   @override
   void initState() {
     super.initState();
@@ -103,7 +106,7 @@ class _InfiniteCarouselDemoState extends State<InfiniteCarouselDemo> {
 
   void _scheduleAutoPlay() {
     _autoPlayTimer?.cancel();
-    _autoPlayTimer = Timer(const Duration(milliseconds: 2200), _advance);
+    _autoPlayTimer = Timer(const Duration(milliseconds: 2800), _advance);
   }
 
   void _advance() {
@@ -113,8 +116,8 @@ class _InfiniteCarouselDemoState extends State<InfiniteCarouselDemo> {
     }
     _pageController
         .nextPage(
-          duration: const Duration(milliseconds: 780),
-          curve: Curves.easeInOutCubic,
+          duration: const Duration(milliseconds: 1100),
+          curve: Curves.easeInOutQuart,
         )
         .whenComplete(_scheduleAutoPlay);
   }
@@ -129,18 +132,9 @@ class _InfiniteCarouselDemoState extends State<InfiniteCarouselDemo> {
 
   @override
   Widget build(BuildContext context) {
-    final selectedItem = _items[_currentPage % _items.length];
-
     return Scaffold(
-      body: DecoratedBox(
-        decoration: const BoxDecoration(
-          gradient: RadialGradient(
-            center: Alignment(0, -0.25),
-            radius: 1.05,
-            colors: [Color(0xFF242129), Color(0xFF0D0C11), Color(0xFF07070A)],
-            stops: [0, 0.62, 1],
-          ),
-        ),
+      body: ColoredBox(
+        color: const Color(0xFFF5F1E9),
         child: SafeArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -157,7 +151,7 @@ class _InfiniteCarouselDemoState extends State<InfiniteCarouselDemo> {
                         Text(
                           'INFINITE',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: Color(0xFF232125),
                             fontSize: 13,
                             fontWeight: FontWeight.w800,
                             letterSpacing: 4.2,
@@ -167,7 +161,7 @@ class _InfiniteCarouselDemoState extends State<InfiniteCarouselDemo> {
                         Text(
                           'Carousel',
                           style: TextStyle(
-                            color: Colors.white,
+                            color: Color(0xFF232125),
                             fontSize: 36,
                             fontWeight: FontWeight.w300,
                             letterSpacing: -1.5,
@@ -179,13 +173,15 @@ class _InfiniteCarouselDemoState extends State<InfiniteCarouselDemo> {
                       width: 44,
                       height: 44,
                       decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.08),
+                        color: Colors.white.withValues(alpha: 0.72),
                         shape: BoxShape.circle,
-                        border: Border.all(
-                          color: Colors.white.withValues(alpha: 0.12),
-                        ),
+                        border: Border.all(color: const Color(0xFFDCD5CA)),
                       ),
-                      child: const Icon(Icons.all_inclusive_rounded, size: 22),
+                      child: const Icon(
+                        Icons.all_inclusive_rounded,
+                        color: Color(0xFF302E32),
+                        size: 22,
+                      ),
                     ),
                   ],
                 ),
@@ -200,10 +196,9 @@ class _InfiniteCarouselDemoState extends State<InfiniteCarouselDemo> {
                   child: PageView.builder(
                     key: const Key('infinite-carousel'),
                     controller: _pageController,
-                    physics: const BouncingScrollPhysics(),
-                    onPageChanged: (page) {
-                      setState(() => _currentPage = page);
-                    },
+                    physics: const PageScrollPhysics(
+                      parent: BouncingScrollPhysics(),
+                    ),
                     itemBuilder: (context, index) {
                       final item = _items[index % _items.length];
                       return AnimatedBuilder(
@@ -215,17 +210,17 @@ class _InfiniteCarouselDemoState extends State<InfiniteCarouselDemo> {
                               : _initialPage.toDouble();
                           final offset = (index - page).clamp(-1.0, 1.0);
                           final distance = offset.abs();
-                          final scale = 1 - distance * 0.14;
+                          final scale = 1 - distance * 0.08;
 
                           return Opacity(
-                            opacity: 1 - distance * 0.32,
+                            opacity: 1 - distance * 0.18,
                             child: Transform.translate(
-                              offset: Offset(0, 22 * distance),
+                              offset: Offset(0, 10 * distance),
                               child: Transform(
                                 alignment: Alignment.center,
                                 transform: Matrix4.identity()
                                   ..setEntry(3, 2, 0.0012)
-                                  ..rotateY(offset * -0.17)
+                                  ..rotateY(offset * -0.07)
                                   ..scaleByDouble(scale, scale, 1, 1),
                                 child: child,
                               ),
@@ -243,27 +238,10 @@ class _InfiniteCarouselDemoState extends State<InfiniteCarouselDemo> {
               ),
               Expanded(
                 flex: 3,
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 380),
-                  switchInCurve: Curves.easeOutCubic,
-                  transitionBuilder: (child, animation) {
-                    return FadeTransition(
-                      opacity: animation,
-                      child: SlideTransition(
-                        position: Tween(
-                          begin: const Offset(0, 0.12),
-                          end: Offset.zero,
-                        ).animate(animation),
-                        child: child,
-                      ),
-                    );
-                  },
-                  child: _ItemDetails(
-                    key: ValueKey(selectedItem.title),
-                    item: selectedItem,
-                    selectedIndex: _currentPage % _items.length,
-                    itemCount: _items.length,
-                  ),
+                child: _CarouselDetails(
+                  pageController: _pageController,
+                  initialPage: _initialPage,
+                  items: _items,
                 ),
               ),
             ],
@@ -279,16 +257,18 @@ class CarouselItem {
     required this.title,
     required this.category,
     required this.number,
-    required this.colors,
+    required this.surface,
     required this.accent,
+    required this.ink,
     required this.icon,
   });
 
   final String title;
   final String category;
   final String number;
-  final List<Color> colors;
+  final Color surface;
   final Color accent;
+  final Color ink;
   final IconData icon;
 }
 
@@ -305,18 +285,13 @@ class CarouselCard extends StatelessWidget {
         clipBehavior: Clip.antiAlias,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(32),
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: item.colors,
-            stops: const [0, 0.58, 1],
-          ),
-          border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+          color: item.surface,
+          border: Border.all(color: item.ink.withValues(alpha: 0.08)),
           boxShadow: [
             BoxShadow(
-              color: item.colors[1].withValues(alpha: 0.28),
-              blurRadius: 32,
-              offset: const Offset(0, 18),
+              color: const Color(0xFF413B35).withValues(alpha: 0.12),
+              blurRadius: 24,
+              offset: const Offset(0, 12),
             ),
           ],
         ),
@@ -324,7 +299,10 @@ class CarouselCard extends StatelessWidget {
           children: [
             Positioned.fill(
               child: CustomPaint(
-                painter: _CardPatternPainter(accent: item.accent),
+                painter: _CardPatternPainter(
+                  accent: item.accent,
+                  ink: item.ink,
+                ),
               ),
             ),
             Padding(
@@ -339,18 +317,18 @@ class CarouselCard extends StatelessWidget {
                         width: 42,
                         height: 42,
                         decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.16),
+                          color: Colors.white.withValues(alpha: 0.48),
                           shape: BoxShape.circle,
                           border: Border.all(
-                            color: Colors.white.withValues(alpha: 0.22),
+                            color: item.ink.withValues(alpha: 0.1),
                           ),
                         ),
-                        child: Icon(item.icon, color: Colors.white, size: 21),
+                        child: Icon(item.icon, color: item.ink, size: 21),
                       ),
                       Text(
                         item.number,
                         style: TextStyle(
-                          color: Colors.white.withValues(alpha: 0.72),
+                          color: item.ink.withValues(alpha: 0.58),
                           fontSize: 13,
                           fontWeight: FontWeight.w700,
                           letterSpacing: 2,
@@ -362,7 +340,7 @@ class CarouselCard extends StatelessWidget {
                   Text(
                     item.category.toUpperCase(),
                     style: TextStyle(
-                      color: Colors.white.withValues(alpha: 0.7),
+                      color: item.ink.withValues(alpha: 0.62),
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
                       letterSpacing: 2.2,
@@ -371,8 +349,8 @@ class CarouselCard extends StatelessWidget {
                   const SizedBox(height: 6),
                   Text(
                     item.title,
-                    style: const TextStyle(
-                      color: Colors.white,
+                    style: TextStyle(
+                      color: item.ink,
                       fontSize: 38,
                       height: 1,
                       fontWeight: FontWeight.w300,
@@ -390,26 +368,27 @@ class CarouselCard extends StatelessWidget {
 }
 
 class _CardPatternPainter extends CustomPainter {
-  const _CardPatternPainter({required this.accent});
+  const _CardPatternPainter({required this.accent, required this.ink});
 
   final Color accent;
+  final Color ink;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final glowPaint = Paint()
-      ..shader =
-          RadialGradient(
-            colors: [accent.withValues(alpha: 0.55), Colors.transparent],
-          ).createShader(
-            Rect.fromCircle(
-              center: Offset(size.width * 0.7, size.height * 0.39),
-              radius: size.width * 0.62,
-            ),
-          );
-    canvas.drawRect(Offset.zero & size, glowPaint);
+    final shapePaint = Paint()..color = accent.withValues(alpha: 0.34);
+    canvas.drawCircle(
+      Offset(size.width * 0.74, size.height * 0.38),
+      size.width * 0.38,
+      shapePaint,
+    );
+    canvas.drawCircle(
+      Offset(size.width * 0.96, size.height * 0.12),
+      size.width * 0.22,
+      Paint()..color = Colors.white.withValues(alpha: 0.25),
+    );
 
     final linePaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.16)
+      ..color = ink.withValues(alpha: 0.12)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.2;
 
@@ -427,7 +406,7 @@ class _CardPatternPainter extends CustomPainter {
       );
     }
 
-    final dotPaint = Paint()..color = Colors.white.withValues(alpha: 0.4);
+    final dotPaint = Paint()..color = ink.withValues(alpha: 0.25);
     for (var i = 0; i < 18; i++) {
       final angle = i * 2.4;
       final radius = 10.0 + i * 5.8;
@@ -444,7 +423,63 @@ class _CardPatternPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _CardPatternPainter oldDelegate) {
-    return oldDelegate.accent != accent;
+    return oldDelegate.accent != accent || oldDelegate.ink != ink;
+  }
+}
+
+class _CarouselDetails extends StatelessWidget {
+  const _CarouselDetails({
+    required this.pageController,
+    required this.initialPage,
+    required this.items,
+  });
+
+  final PageController pageController;
+  final int initialPage;
+  final List<CarouselItem> items;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: pageController,
+      builder: (context, _) {
+        final page = pageController.hasClients
+            ? (pageController.page ?? initialPage.toDouble())
+            : initialPage.toDouble();
+        final lowerPage = page.floor();
+        final progress = page - lowerPage;
+        final lowerIndex = lowerPage % items.length;
+        final upperIndex = (lowerPage + 1) % items.length;
+
+        return Stack(
+          fit: StackFit.expand,
+          children: [
+            Opacity(
+              opacity: 1 - progress,
+              child: Transform.translate(
+                offset: Offset(-14 * progress, 0),
+                child: _ItemDetails(
+                  item: items[lowerIndex],
+                  selectedIndex: lowerIndex,
+                  itemCount: items.length,
+                ),
+              ),
+            ),
+            Opacity(
+              opacity: progress,
+              child: Transform.translate(
+                offset: Offset(14 * (1 - progress), 0),
+                child: _ItemDetails(
+                  item: items[upperIndex],
+                  selectedIndex: upperIndex,
+                  itemCount: items.length,
+                ),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 }
 
@@ -453,7 +488,6 @@ class _ItemDetails extends StatelessWidget {
     required this.item,
     required this.selectedIndex,
     required this.itemCount,
-    super.key,
   });
 
   final CarouselItem item;
@@ -474,7 +508,7 @@ class _ItemDetails extends StatelessWidget {
                 Text(
                   item.title,
                   style: const TextStyle(
-                    color: Colors.white,
+                    color: Color(0xFF242126),
                     fontSize: 24,
                     fontWeight: FontWeight.w600,
                     letterSpacing: -0.6,
@@ -484,7 +518,7 @@ class _ItemDetails extends StatelessWidget {
                 Text(
                   '${item.category}  ·  Swipe to explore',
                   style: TextStyle(
-                    color: Colors.white.withValues(alpha: 0.48),
+                    color: const Color(0xFF242126).withValues(alpha: 0.56),
                     fontSize: 13,
                   ),
                 ),
@@ -500,7 +534,7 @@ class _ItemDetails extends StatelessWidget {
                       decoration: BoxDecoration(
                         color: active
                             ? item.accent
-                            : Colors.white.withValues(alpha: 0.2),
+                            : const Color(0xFF242126).withValues(alpha: 0.14),
                         borderRadius: BorderRadius.circular(8),
                       ),
                     );
@@ -512,7 +546,7 @@ class _ItemDetails extends StatelessWidget {
           Text(
             '${selectedIndex + 1}'.padLeft(2, '0'),
             style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.2),
+              color: const Color(0xFF242126).withValues(alpha: 0.16),
               fontSize: 46,
               height: 1,
               fontWeight: FontWeight.w200,
