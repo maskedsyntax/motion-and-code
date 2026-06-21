@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/Users/batman/maskedsyntax/motion-and-code/swiftui/dynamic_weather_animation/.build/arm64-apple-macosx/debug/DynamicWeatherAnimation.build/primary.swiftdeps"
+  },
+  "/Users/batman/maskedsyntax/motion-and-code/swiftui/dynamic_weather_animation/Sources/DynamicWeatherAnimation/DynamicWeatherAnimationApp.swift": {
+    "dependencies": "/Users/batman/maskedsyntax/motion-and-code/swiftui/dynamic_weather_animation/.build/arm64-apple-macosx/debug/DynamicWeatherAnimation.build/DynamicWeatherAnimationApp.d",
+    "object": "/Users/batman/maskedsyntax/motion-and-code/swiftui/dynamic_weather_animation/.build/arm64-apple-macosx/debug/DynamicWeatherAnimation.build/DynamicWeatherAnimationApp.swift.o",
+    "swiftmodule": "/Users/batman/maskedsyntax/motion-and-code/swiftui/dynamic_weather_animation/.build/arm64-apple-macosx/debug/DynamicWeatherAnimation.build/DynamicWeatherAnimationApp~partial.swiftmodule",
+    "swift-dependencies": "/Users/batman/maskedsyntax/motion-and-code/swiftui/dynamic_weather_animation/.build/arm64-apple-macosx/debug/DynamicWeatherAnimation.build/DynamicWeatherAnimationApp.swiftdeps",
+    "diagnostics": "/Users/batman/maskedsyntax/motion-and-code/swiftui/dynamic_weather_animation/.build/arm64-apple-macosx/debug/DynamicWeatherAnimation.build/DynamicWeatherAnimationApp.dia"
+  }
+}

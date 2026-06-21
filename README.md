@@ -15,7 +15,8 @@ Each folder contains a small, self-contained Flutter or SwiftUI animation built 
 
 ## SwiftUI
 
-SwiftUI demos will be added as they are built.
+- [Apple Music Album Expansion](swiftui/apple_music_expansion) - An Apple Music-style album card that expands into a fullscreen player using matched geometry.
+- [Dynamic Weather Animation](swiftui/dynamic_weather_animation) - An Apple Weather-inspired card with moving clouds, rain particles, lightning flashes, and animated temperature text.
 
 ## Links
 

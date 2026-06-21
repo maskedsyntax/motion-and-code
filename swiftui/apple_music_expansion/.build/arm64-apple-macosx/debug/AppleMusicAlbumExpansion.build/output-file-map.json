@@ -1,0 +1,12 @@
+{
+  "": {
+    "swift-dependencies": "/Users/batman/maskedsyntax/motion-and-code/swiftui/apple_music_expansion/.build/arm64-apple-macosx/debug/AppleMusicAlbumExpansion.build/primary.swiftdeps"
+  },
+  "/Users/batman/maskedsyntax/motion-and-code/swiftui/apple_music_expansion/Sources/AppleMusicAlbumExpansion/AppleMusicAlbumExpansionApp.swift": {
+    "dependencies": "/Users/batman/maskedsyntax/motion-and-code/swiftui/apple_music_expansion/.build/arm64-apple-macosx/debug/AppleMusicAlbumExpansion.build/AppleMusicAlbumExpansionApp.d",
+    "object": "/Users/batman/maskedsyntax/motion-and-code/swiftui/apple_music_expansion/.build/arm64-apple-macosx/debug/AppleMusicAlbumExpansion.build/AppleMusicAlbumExpansionApp.swift.o",
+    "swiftmodule": "/Users/batman/maskedsyntax/motion-and-code/swiftui/apple_music_expansion/.build/arm64-apple-macosx/debug/AppleMusicAlbumExpansion.build/AppleMusicAlbumExpansionApp~partial.swiftmodule",
+    "swift-dependencies": "/Users/batman/maskedsyntax/motion-and-code/swiftui/apple_music_expansion/.build/arm64-apple-macosx/debug/AppleMusicAlbumExpansion.build/AppleMusicAlbumExpansionApp.swiftdeps",
+    "diagnostics": "/Users/batman/maskedsyntax/motion-and-code/swiftui/apple_music_expansion/.build/arm64-apple-macosx/debug/AppleMusicAlbumExpansion.build/AppleMusicAlbumExpansionApp.dia"
+  }
+}
