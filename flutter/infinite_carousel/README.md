@@ -6,7 +6,7 @@ A self-contained, center-focused carousel animation demo for Motion & Code.
 
 - Effectively infinite looping with modular card data
 - Restrained position-based scale, perspective rotation, opacity, and offset
-- Five original flat-color card designs drawn without image assets
+- Five purpose-built editorial motifs: ribbons, orbit, flame, waves, and petals
 - Auto-play that pauses during touch interaction
 - Page-synchronized crossfading labels and indicators
 

@@ -9,6 +9,12 @@ void main() {
     expect(find.text('INFINITE'), findsOneWidget);
     expect(find.text('Aurora'), findsWidgets);
     expect(find.byKey(const Key('infinite-carousel')), findsOneWidget);
+    expect(
+      tester
+          .widget<PageView>(find.byKey(const Key('infinite-carousel')))
+          .clipBehavior,
+      Clip.none,
+    );
 
     await tester.drag(
       find.byKey(const Key('infinite-carousel')),

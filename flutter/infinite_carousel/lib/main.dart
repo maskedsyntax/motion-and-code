@@ -45,7 +45,7 @@ class _InfiniteCarouselDemoState extends State<InfiniteCarouselDemo> {
       surface: Color(0xFFCBE7D8),
       accent: Color(0xFF56A889),
       ink: Color(0xFF173A32),
-      icon: Icons.auto_awesome_rounded,
+      motif: CardMotif.ribbon,
     ),
     CarouselItem(
       title: 'Lunar',
@@ -54,7 +54,7 @@ class _InfiniteCarouselDemoState extends State<InfiniteCarouselDemo> {
       surface: Color(0xFFD9D6ED),
       accent: Color(0xFF8982BE),
       ink: Color(0xFF302D53),
-      icon: Icons.nightlight_round,
+      motif: CardMotif.orbit,
     ),
     CarouselItem(
       title: 'Ember',
@@ -63,7 +63,7 @@ class _InfiniteCarouselDemoState extends State<InfiniteCarouselDemo> {
       surface: Color(0xFFF2D2BC),
       accent: Color(0xFFD97950),
       ink: Color(0xFF5A2E21),
-      icon: Icons.local_fire_department_rounded,
+      motif: CardMotif.flame,
     ),
     CarouselItem(
       title: 'Tidal',
@@ -72,7 +72,7 @@ class _InfiniteCarouselDemoState extends State<InfiniteCarouselDemo> {
       surface: Color(0xFFC5E1E4),
       accent: Color(0xFF4E9DA5),
       ink: Color(0xFF163E46),
-      icon: Icons.water_rounded,
+      motif: CardMotif.wave,
     ),
     CarouselItem(
       title: 'Petal',
@@ -81,7 +81,7 @@ class _InfiniteCarouselDemoState extends State<InfiniteCarouselDemo> {
       surface: Color(0xFFEBCED8),
       accent: Color(0xFFC46E8D),
       ink: Color(0xFF542D3D),
-      icon: Icons.local_florist_rounded,
+      motif: CardMotif.petal,
     ),
   ];
 
@@ -196,6 +196,7 @@ class _InfiniteCarouselDemoState extends State<InfiniteCarouselDemo> {
                   child: PageView.builder(
                     key: const Key('infinite-carousel'),
                     controller: _pageController,
+                    clipBehavior: Clip.none,
                     physics: const PageScrollPhysics(
                       parent: BouncingScrollPhysics(),
                     ),
@@ -260,7 +261,7 @@ class CarouselItem {
     required this.surface,
     required this.accent,
     required this.ink,
-    required this.icon,
+    required this.motif,
   });
 
   final String title;
@@ -269,8 +270,10 @@ class CarouselItem {
   final Color surface;
   final Color accent;
   final Color ink;
-  final IconData icon;
+  final CardMotif motif;
 }
+
+enum CardMotif { ribbon, orbit, flame, wave, petal }
 
 class CarouselCard extends StatelessWidget {
   const CarouselCard({required this.item, super.key});
@@ -286,12 +289,13 @@ class CarouselCard extends StatelessWidget {
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(32),
           color: item.surface,
-          border: Border.all(color: item.ink.withValues(alpha: 0.08)),
+          border: Border.all(color: item.ink.withValues(alpha: 0.12)),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF413B35).withValues(alpha: 0.12),
-              blurRadius: 24,
-              offset: const Offset(0, 12),
+              color: const Color(0xFF413B35).withValues(alpha: 0.1),
+              blurRadius: 36,
+              spreadRadius: -4,
+              offset: const Offset(0, 16),
             ),
           ],
         ),
@@ -302,6 +306,7 @@ class CarouselCard extends StatelessWidget {
                 painter: _CardPatternPainter(
                   accent: item.accent,
                   ink: item.ink,
+                  motif: item.motif,
                 ),
               ),
             ),
@@ -314,19 +319,29 @@ class CarouselCard extends StatelessWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Container(
-                        width: 42,
-                        height: 42,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 8,
+                        ),
                         decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.48),
-                          shape: BoxShape.circle,
+                          color: Colors.white.withValues(alpha: 0.42),
+                          borderRadius: BorderRadius.circular(20),
                           border: Border.all(
-                            color: item.ink.withValues(alpha: 0.1),
+                            color: item.ink.withValues(alpha: 0.12),
                           ),
                         ),
-                        child: Icon(item.icon, color: item.ink, size: 21),
+                        child: Text(
+                          'M / C',
+                          style: TextStyle(
+                            color: item.ink,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 1.4,
+                          ),
+                        ),
                       ),
                       Text(
-                        item.number,
+                        'STUDY  ${item.number}',
                         style: TextStyle(
                           color: item.ink.withValues(alpha: 0.58),
                           fontSize: 13,
@@ -337,6 +352,12 @@ class CarouselCard extends StatelessWidget {
                     ],
                   ),
                   const Spacer(),
+                  Container(
+                    width: 36,
+                    height: 2,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    color: item.ink,
+                  ),
                   Text(
                     item.category.toUpperCase(),
                     style: TextStyle(
@@ -368,62 +389,190 @@ class CarouselCard extends StatelessWidget {
 }
 
 class _CardPatternPainter extends CustomPainter {
-  const _CardPatternPainter({required this.accent, required this.ink});
+  const _CardPatternPainter({
+    required this.accent,
+    required this.ink,
+    required this.motif,
+  });
 
   final Color accent;
   final Color ink;
+  final CardMotif motif;
 
   @override
   void paint(Canvas canvas, Size size) {
-    final shapePaint = Paint()..color = accent.withValues(alpha: 0.34);
-    canvas.drawCircle(
-      Offset(size.width * 0.74, size.height * 0.38),
-      size.width * 0.38,
-      shapePaint,
+    final panel = RRect.fromRectAndRadius(
+      Rect.fromLTWH(
+        size.width * 0.1,
+        size.height * 0.2,
+        size.width * 0.8,
+        size.height * 0.47,
+      ),
+      const Radius.circular(24),
     );
-    canvas.drawCircle(
-      Offset(size.width * 0.96, size.height * 0.12),
-      size.width * 0.22,
-      Paint()..color = Colors.white.withValues(alpha: 0.25),
+    canvas.drawRRect(
+      panel,
+      Paint()..color = Colors.white.withValues(alpha: 0.28),
+    );
+    canvas.drawRRect(
+      panel,
+      Paint()
+        ..color = ink.withValues(alpha: 0.1)
+        ..style = PaintingStyle.stroke
+        ..strokeWidth = 1,
     );
 
-    final linePaint = Paint()
-      ..color = ink.withValues(alpha: 0.12)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 1.2;
-
-    for (var i = 0; i < 5; i++) {
-      final radius = size.width * (0.16 + i * 0.11);
-      canvas.drawArc(
-        Rect.fromCircle(
-          center: Offset(size.width * 0.72, size.height * 0.4),
-          radius: radius,
-        ),
-        math.pi * 0.72,
-        math.pi * 1.36,
-        false,
-        linePaint,
-      );
+    switch (motif) {
+      case CardMotif.ribbon:
+        _paintRibbon(canvas, size);
+      case CardMotif.orbit:
+        _paintOrbit(canvas, size);
+      case CardMotif.flame:
+        _paintFlame(canvas, size);
+      case CardMotif.wave:
+        _paintWave(canvas, size);
+      case CardMotif.petal:
+        _paintPetal(canvas, size);
     }
+  }
 
-    final dotPaint = Paint()..color = ink.withValues(alpha: 0.25);
-    for (var i = 0; i < 18; i++) {
-      final angle = i * 2.4;
-      final radius = 10.0 + i * 5.8;
-      canvas.drawCircle(
-        Offset(
-          size.width * 0.7 + math.cos(angle) * radius,
-          size.height * 0.4 + math.sin(angle) * radius,
-        ),
-        i.isEven ? 1.6 : 0.9,
-        dotPaint,
+  void _paintRibbon(Canvas canvas, Size size) {
+    for (var i = 0; i < 5; i++) {
+      final y = size.height * (0.31 + i * 0.062);
+      final path = Path()
+        ..moveTo(size.width * 0.18, y)
+        ..cubicTo(
+          size.width * 0.35,
+          y - 38,
+          size.width * 0.57,
+          y + 38,
+          size.width * 0.82,
+          y - 4,
+        );
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = i.isEven ? ink.withValues(alpha: 0.72) : accent
+          ..style = PaintingStyle.stroke
+          ..strokeCap = StrokeCap.round
+          ..strokeWidth = 7 - i * 0.7,
       );
     }
   }
 
+  void _paintOrbit(Canvas canvas, Size size) {
+    final center = Offset(size.width * 0.5, size.height * 0.43);
+    final orbitPaint = Paint()
+      ..color = ink.withValues(alpha: 0.62)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2;
+    canvas.drawCircle(center, size.width * 0.12, Paint()..color = accent);
+    for (final angle in [-0.48, 0.18, 0.72]) {
+      canvas.save();
+      canvas.translate(center.dx, center.dy);
+      canvas.rotate(angle);
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: Offset.zero,
+          width: size.width * 0.58,
+          height: size.width * 0.2,
+        ),
+        orbitPaint,
+      );
+      canvas.restore();
+    }
+    canvas.drawCircle(
+      center + Offset(size.width * 0.25, 0),
+      6,
+      Paint()..color = ink,
+    );
+  }
+
+  void _paintFlame(Canvas canvas, Size size) {
+    final centerX = size.width * 0.5;
+    for (var i = 0; i < 3; i++) {
+      final inset = i * size.width * 0.075;
+      final path = Path()
+        ..moveTo(centerX, size.height * (0.27 + i * 0.055))
+        ..quadraticBezierTo(
+          size.width * 0.77 - inset,
+          size.height * 0.45,
+          centerX,
+          size.height * (0.61 - i * 0.025),
+        )
+        ..quadraticBezierTo(
+          size.width * 0.23 + inset,
+          size.height * 0.45,
+          centerX,
+          size.height * (0.27 + i * 0.055),
+        )
+        ..close();
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = i == 0
+              ? ink.withValues(alpha: 0.78)
+              : accent.withValues(alpha: 0.88 - i * 0.18),
+      );
+    }
+  }
+
+  void _paintWave(Canvas canvas, Size size) {
+    for (var row = 0; row < 6; row++) {
+      final path = Path();
+      for (var step = 0; step <= 48; step++) {
+        final x = size.width * (0.16 + step / 48 * 0.68);
+        final y =
+            size.height * (0.31 + row * 0.052) +
+            math.sin(step / 48 * math.pi * 3 + row * 0.52) * 13;
+        if (step == 0) {
+          path.moveTo(x, y);
+        } else {
+          path.lineTo(x, y);
+        }
+      }
+      canvas.drawPath(
+        path,
+        Paint()
+          ..color = row == 2 ? accent : ink.withValues(alpha: 0.56)
+          ..style = PaintingStyle.stroke
+          ..strokeWidth = row == 2 ? 5 : 2
+          ..strokeCap = StrokeCap.round,
+      );
+    }
+  }
+
+  void _paintPetal(Canvas canvas, Size size) {
+    final center = Offset(size.width * 0.5, size.height * 0.43);
+    canvas.save();
+    canvas.translate(center.dx, center.dy);
+    for (var i = 0; i < 6; i++) {
+      canvas.save();
+      canvas.rotate(i * math.pi / 3);
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: Offset(0, -size.width * 0.13),
+          width: size.width * 0.18,
+          height: size.width * 0.34,
+        ),
+        Paint()
+          ..color = i.isEven
+              ? accent.withValues(alpha: 0.9)
+              : ink.withValues(alpha: 0.68),
+      );
+      canvas.restore();
+    }
+    canvas.drawCircle(Offset.zero, 15, Paint()..color = surfaceTint);
+    canvas.restore();
+  }
+
+  Color get surfaceTint => Color.lerp(accent, Colors.white, 0.6)!;
+
   @override
   bool shouldRepaint(covariant _CardPatternPainter oldDelegate) {
-    return oldDelegate.accent != accent || oldDelegate.ink != ink;
+    return oldDelegate.accent != accent ||
+        oldDelegate.ink != ink ||
+        oldDelegate.motif != motif;
   }
 }
 
